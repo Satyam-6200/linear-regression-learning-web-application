@@ -1,4 +1,3 @@
-# linear-regression-learning-web-application
 # Linear regression — Interactive Linear Regression Learning System
 
 ---

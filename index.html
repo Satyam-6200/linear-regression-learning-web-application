@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linear Regression — Interactive Linear Regression Learning System</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <!-- Chart.js for visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- PapaParse for CSV parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- MathJax for LaTeX -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+
+  <!-- ─── SIDEBAR NAV ─── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon"></span>
+      <span class="brand-name">Linear Regression</span>
+    </div>
+    <nav class="pipeline-nav">
+      <div class="nav-label">PIPELINE</div>
+      <a class="nav-item active" data-step="0" onclick="goToStep(0)">
+        <span class="nav-num">01</span>
+        <span class="nav-text">Dataset Input</span>
+        <span class="nav-status" id="status-0">●</span>
+      </a>
+      <a class="nav-item" data-step="1" onclick="goToStep(1)">
+        <span class="nav-num">02</span>
+        <span class="nav-text">Preprocessing</span>
+        <span class="nav-status" id="status-1">○</span>
+      </a>
+      <a class="nav-item" data-step="2" onclick="goToStep(2)">
+        <span class="nav-num">03</span>
+        <span class="nav-text">EDA</span>
+        <span class="nav-status" id="status-2">○</span>
+      </a>
+      <a class="nav-item" data-step="3" onclick="goToStep(3)">
+        <span class="nav-num">04</span>
+        <span class="nav-text">LR Theory</span>
+        <span class="nav-status" id="status-3">○</span>
+      </a>
+      <a class="nav-item" data-step="4" onclick="goToStep(4)">
+        <span class="nav-num">05</span>
+        <span class="nav-text">Training Config</span>
+        <span class="nav-status" id="status-4">○</span>
+      </a>
+      <a class="nav-item" data-step="5" onclick="goToStep(5)">
+        <span class="nav-num">06</span>
+        <span class="nav-text">Model Training</span>
+        <span class="nav-status" id="status-5">○</span>
+      </a>
+      <a class="nav-item" data-step="6" onclick="goToStep(6)">
+        <span class="nav-num">07</span>
+        <span class="nav-text">Prediction</span>
+        <span class="nav-status" id="status-6">○</span>
+      </a>
+      <a class="nav-item" data-step="7" onclick="goToStep(7)">
+        <span class="nav-num">08</span>
+        <span class="nav-text">Evaluation</span>
+        <span class="nav-status" id="status-7">○</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-tag">  ML Learning System</div>
+    </div>
+  </aside>
+
+  <!-- ─── MAIN CONTENT ─── -->
+  <main class="main-content">
+
+    <!-- ══════════════════════════════ STEP 0: DATASET INPUT ══════════════════════════════ -->
+    <section class="step-section active" id="step-0">
+      <div class="step-header">
+        <div class="step-badge">STEP 01</div>
+        <h1 class="step-title">Dataset Input</h1>
+        <p class="step-subtitle">Upload your CSV dataset or use our sample dataset to get started.</p>
+      </div>
+
+      <div class="card-grid two-col">
+        <!-- Upload card -->
+        <div class="card upload-card" id="upload-zone">
+          <div class="upload-icon">⬆</div>
+          <h3>Upload CSV File</h3>
+          <p>Drag & drop or click to select a CSV file</p>
+          <input type="file" id="csv-file-input" accept=".csv" style="display:none" />
+          <button class="btn-primary" onclick="document.getElementById('csv-file-input').click()">Choose File</button>
+          <div class="upload-hint">Supports: .csv files with headers</div>
+        </div>
+
+        <!-- Sample dataset card -->
+        <div class="card">
+          <h3>📊 Use Sample Dataset</h3>
+          <p>Try with a pre-loaded housing price dataset (area, rooms, age → price)</p>
+          <button class="btn-secondary" onclick="loadSampleDataset()">Load Sample Dataset</button>
+          <div class="sample-info" id="sample-info" style="display:none">
+            <span class="tag">50 rows</span>
+            <span class="tag">4 columns</span>
+            <span class="tag">Regression Ready</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dataset Preview -->
+      <div class="card" id="dataset-preview" style="display:none">
+        <div class="card-header-row">
+          <h3>Dataset Preview</h3>
+          <div class="meta-tags" id="dataset-meta"></div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table" id="preview-table"></table>
+        </div>
+        <div class="column-types" id="column-types"></div>
+        <div class="step-actions">
+          <button class="btn-primary" onclick="goToStep(1)">Proceed to Preprocessing →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ STEP 1: PREPROCESSING ══════════════════════════════ -->
+    <section class="step-section" id="step-1">
+      <div class="step-header">
+        <div class="step-badge">STEP 02</div>
+        <h1 class="step-title">Preprocessing</h1>
+        <p class="step-subtitle">Clean and transform your data before training.</p>
+      </div>
+
+      <!-- Missing Values -->
+      <div class="card accordion-card">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <div class="accordion-title">
+            <span class="acc-icon">🔍</span> Missing Value Handling
+          </div>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div class="why-box">
+            <strong>Why this step?</strong> Missing values cause errors during model training. We need to impute (fill) them using statistical strategies so the model sees complete data.
+          </div>
+          <div id="missing-value-info"></div>
+          <div class="option-group">
+            <label>Strategy:</label>
+            <select id="mv-strategy">
+              <option value="mean">Mean Imputation</option>
+              <option value="median">Median Imputation</option>
+              <option value="drop">Drop Rows</option>
+            </select>
+            <button class="btn-secondary" onclick="applyMissingValues()">Apply</button>
+          </div>
+          <div id="mv-before-after" class="before-after"></div>
+        </div>
+      </div>
+
+      <!-- Encoding -->
+      <div class="card accordion-card">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <div class="accordion-title">
+            <span class="acc-icon">🔤</span> Categorical Encoding
+          </div>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div class="why-box">
+            <strong>Why this step?</strong> ML models work with numbers. Categorical text columns must be converted to numeric form via Label Encoding (assigns integers) or One-Hot Encoding (creates binary columns per category).
+          </div>
+          <div id="cat-columns-info"></div>
+          <div class="option-group">
+            <label>Method:</label>
+            <select id="encoding-method">
+              <option value="label">Label Encoding</option>
+              <option value="onehot">One-Hot Encoding</option>
+            </select>
+            <button class="btn-secondary" onclick="applyEncoding()">Apply</button>
+          </div>
+          <div id="encoding-before-after" class="before-after"></div>
+        </div>
+      </div>
+
+      <!-- Feature Scaling -->
+      <div class="card accordion-card">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <div class="accordion-title">
+            <span class="acc-icon">⚖️</span> Feature Scaling
+          </div>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div class="why-box">
+            <strong>Why this step?</strong> Features with large ranges dominate gradient descent. Standardization (z-score) or Normalization (0–1 range) puts all features on equal footing, speeding convergence.
+          </div>
+          <div class="option-group">
+            <label>Method:</label>
+            <select id="scaling-method">
+              <option value="standardize">Standardization (z-score)</option>
+              <option value="normalize">Normalization (min-max)</option>
+              <option value="none">None</option>
+            </select>
+            <button class="btn-secondary" onclick="applyScaling()">Apply</button>
+          </div>
+          <div id="scaling-before-after" class="before-after"></div>
+        </div>
+      </div>
+
+      <!-- Feature Selection -->
+      <div class="card accordion-card">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <div class="accordion-title">
+            <span class="acc-icon">🎯</span> Feature & Target Selection
+          </div>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div class="why-box">
+            <strong>Why this step?</strong> You must define which column is the <em>target</em> (what to predict) and which columns are <em>features</em> (inputs to the model).
+          </div>
+          <div class="option-group vertical" id="feature-selection-ui"></div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn-outline" onclick="goToStep(0)">← Back</button>
+        <button class="btn-primary" onclick="finalizePreprocessing()">Apply & Go to EDA →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ STEP 2: EDA ══════════════════════════════ -->
+    <section class="step-section" id="step-2">
+      <div class="step-header">
+        <div class="step-badge">STEP 03</div>
+        <h1 class="step-title">Exploratory Data Analysis</h1>
+        <p class="step-subtitle">Understand patterns, distributions, and relationships in your data.</p>
+      </div>
+
+      <div class="card-grid two-col">
+        <div class="card">
+          <h3>📊 Feature Distributions</h3>
+          <div class="chart-controls">
+            <label>Select Feature:</label>
+            <select id="hist-feature-select" onchange="drawHistogram()"></select>
+          </div>
+          <canvas id="hist-chart" height="220"></canvas>
+        </div>
+        <div class="card">
+          <h3>🔗 Correlation Analysis</h3>
+          <div id="corr-matrix"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📈 Feature vs Target Scatter Plot</h3>
+        <div class="chart-controls">
+          <label>X-Axis Feature:</label>
+          <select id="scatter-x-select" onchange="drawScatter()"></select>
+        </div>
+        <canvas id="scatter-chart" height="260"></canvas>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn-outline" onclick="goToStep(1)">← Back</button>
+        <button class="btn-primary" onclick="goToStep(3)">Proceed to Theory →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ STEP 3: LR THEORY ══════════════════════════════ -->
+    <section class="step-section" id="step-3">
+      <div class="step-header">
+        <div class="step-badge">STEP 04</div>
+        <h1 class="step-title">Linear Regression Theory</h1>
+        <p class="step-subtitle">Deep-dive into the math behind the model — formula, cost function, gradient descent.</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="theory-tabs">
+        <button class="tab-btn active" onclick="showTheoryTab('simple', this)">Simple LR</button>
+        <button class="tab-btn" onclick="showTheoryTab('multiple', this)">Multiple LR</button>
+        <button class="tab-btn" onclick="showTheoryTab('cost', this)">Cost Function</button>
+        <button class="tab-btn" onclick="showTheoryTab('gradient', this)">Gradient Descent</button>
+        <button class="tab-btn" onclick="showTheoryTab('walkthrough', this)">Step-by-Step</button>
+      </div>
+
+      <div class="theory-panel active" id="theory-simple">
+        <div class="card math-card">
+          <h3>Hypothesis Formulation — Simple Linear Regression</h3>
+          <div class="math-block">$$h_\theta(x) = \theta_0 + \theta_1 x$$</div>
+          <div class="math-explanation">
+            <div class="param-row"><code>h_θ(x)</code> — predicted output (hypothesis)</div>
+            <div class="param-row"><code>θ₀</code> — intercept (bias term), where the line crosses y-axis</div>
+            <div class="param-row"><code>θ₁</code> — slope (weight), how much y changes per unit x</div>
+            <div class="param-row"><code>x</code> — the single input feature</div>
+          </div>
+          <div class="visual-line-demo">
+            <canvas id="line-demo-canvas" width="500" height="250"></canvas>
+            <div class="demo-controls">
+              <label>θ₀ (intercept): <span id="t0-val">0</span></label>
+              <input type="range" id="theta0-slider" min="-5" max="5" step="0.1" value="0" oninput="updateLineDemoVal('t0-val', this.value); drawLineDemo()">
+              <label>θ₁ (slope): <span id="t1-val">1</span></label>
+              <input type="range" id="theta1-slider" min="-3" max="3" step="0.1" value="1" oninput="updateLineDemoVal('t1-val', this.value); drawLineDemo()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="theory-panel" id="theory-multiple">
+        <div class="card math-card">
+          <h3>Multiple Linear Regression</h3>
+          <div class="math-block">$$h_\theta(\mathbf{x}) = \theta_0 + \theta_1 x_1 + \theta_2 x_2 + \cdots + \theta_n x_n = \boldsymbol{\theta}^T \mathbf{x}$$</div>
+          <div class="math-explanation">
+            <div class="param-row"><code>x₁, x₂, …, xₙ</code> — n input features</div>
+            <div class="param-row"><code>θ₁, θ₂, …, θₙ</code> — weights for each feature</div>
+            <div class="param-row"><code>θ₀</code> — bias (add x₀ = 1 to feature vector)</div>
+            <div class="param-row">In matrix form: <code>h = Xθ</code> where X is [m × (n+1)], θ is [(n+1) × 1]</div>
+          </div>
+          <div class="info-box">The <strong>Normal Equation</strong> gives a closed-form solution: <span class="math-inline">$$\theta = (X^T X)^{-1} X^T y$$</span></div>
+        </div>
+      </div>
+
+      <div class="theory-panel" id="theory-cost">
+        <div class="card math-card">
+          <h3>Cost Function — Mean Squared Error</h3>
+          <div class="math-block">$$J(\theta) = \frac{1}{2m} \sum_{i=1}^{m} \left( h_\theta(x^{(i)}) - y^{(i)} \right)^2$$</div>
+          <div class="math-explanation">
+            <div class="param-row"><code>m</code> — number of training samples</div>
+            <div class="param-row"><code>h_θ(x⁽ⁱ⁾)</code> — predicted value for sample i</div>
+            <div class="param-row"><code>y⁽ⁱ⁾</code> — actual value for sample i</div>
+            <div class="param-row">The <code>½</code> simplifies the derivative calculation</div>
+          </div>
+          <div class="why-box">
+            <strong>Why MSE?</strong> Squaring penalizes large errors more, making the model sensitive to outliers. The result is always ≥ 0, and 0 = perfect fit. The function is convex, so gradient descent always finds the global minimum.
+          </div>
+          <div class="cost-visualization">
+            <canvas id="cost-canvas" width="500" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="theory-panel" id="theory-gradient">
+        <div class="card math-card">
+          <h3>Gradient Descent — Parameter Learning</h3>
+          <div class="math-block">$$\theta_j := \theta_j - \alpha \frac{\partial}{\partial \theta_j} J(\theta)$$</div>
+          <div class="math-block small">$$\theta_j := \theta_j - \frac{\alpha}{m} \sum_{i=1}^{m} \left( h_\theta(x^{(i)}) - y^{(i)} \right) x_j^{(i)}$$</div>
+          <div class="math-explanation">
+            <div class="param-row"><code>α</code> — learning rate (step size), typically 0.01 – 0.1</div>
+            <div class="param-row"><code>∂J/∂θⱼ</code> — partial derivative = direction of steepest ascent</div>
+            <div class="param-row">We subtract to go <em>downhill</em> on the cost surface</div>
+            <div class="param-row">Repeat until convergence (cost stops decreasing)</div>
+          </div>
+          <div class="why-box">
+            <strong>Why Gradient Descent?</strong> The Normal Equation requires matrix inversion — O(n³) — which is slow for many features. Gradient Descent scales to millions of features and samples.
+          </div>
+        </div>
+      </div>
+
+      <div class="theory-panel" id="theory-walkthrough">
+        <div class="card math-card">
+          <h3>Step-by-Step Computation on Sample Data</h3>
+          <div id="walkthrough-content">
+            <div class="info-box">Load a dataset first (Step 1) to see a live walkthrough using your actual data.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn-outline" onclick="goToStep(2)">← Back</button>
+        <button class="btn-primary" onclick="goToStep(4)">Configure Training →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ STEP 4: TRAINING CONFIG ══════════════════════════════ -->
+    <section class="step-section" id="step-4">
+      <div class="step-header">
+        <div class="step-badge">STEP 05</div>
+        <h1 class="step-title">Training Configuration</h1>
+        <p class="step-subtitle">Set hyperparameters and validation strategy before training begins.</p>
+      </div>
+
+      <div class="card-grid two-col">
+        <div class="card">
+          <h3>🔀 Train-Test Split</h3>
+          <div class="why-box">
+            <strong>Why?</strong> We hide test data from the model so evaluation is on truly unseen examples — simulating real-world performance.
+          </div>
+          <div class="slider-group">
+            <label>Training set size: <strong id="train-pct-label">80%</strong></label>
+            <input type="range" id="train-split" min="50" max="90" step="5" value="80"
+              oninput="document.getElementById('train-pct-label').textContent = this.value + '%'">
+            <div class="split-bar">
+              <div class="split-train" id="split-train-bar" style="width:80%">Train</div>
+              <div class="split-test">Test</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>📐 Cross-Validation</h3>
+          <div class="why-box">
+            <strong>Why?</strong> K-Fold CV trains K times on different folds, giving a more robust estimate of model performance with less variance than a single split.
+          </div>
+          <div class="toggle-group">
+            <label class="toggle-label">Enable K-Fold CV:</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cv-toggle" onchange="toggleCV(this)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div id="cv-controls" style="display:none; margin-top:1rem;">
+            <label>K value: <strong id="k-val-label">5</strong></label>
+            <input type="range" id="k-value" min="2" max="10" step="1" value="5"
+              oninput="document.getElementById('k-val-label').textContent = this.value">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>⚙️ Algorithm Settings</h3>
+        <div class="card-grid two-col">
+          <div class="option-group vertical">
+            <label>Learning Rate (α):</label>
+            <input type="number" id="learning-rate" value="0.01" step="0.001" min="0.0001" max="1" class="input-field">
+            <small>Common values: 0.001, 0.01, 0.1. Too large → diverge. Too small → slow.</small>
+          </div>
+          <div class="option-group vertical">
+            <label>Max Iterations:</label>
+            <input type="number" id="max-iter" value="1000" step="100" min="100" max="10000" class="input-field">
+            <small>Number of gradient descent steps. More = more time but better convergence.</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn-outline" onclick="goToStep(3)">← Back</button>
+        <button class="btn-primary" onclick="goToStep(5); trainModel()">Train Model →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ STEP 5: MODEL TRAINING ══════════════════════════════ -->
+    <section class="step-section" id="step-5">
+      <div class="step-header">
+        <div class="step-badge">STEP 06</div>
+        <h1 class="step-title">Model Training & Visualization</h1>
+        <p class="step-subtitle">Watch the model learn — gradient descent in action.</p>
+      </div>
+
+      <div class="card" id="training-progress-card">
+        <h3>🏋️ Training Progress</h3>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="train-progress-bar" style="width:0%"></div>
+        </div>
+        <div id="training-log" class="training-log"></div>
+      </div>
+
+      <div class="card-grid two-col">
+        <div class="card">
+          <h3>📉 Cost Convergence</h3>
+          <canvas id="convergence-chart" height="250"></canvas>
+        </div>
+        <div class="card">
+          <h3>📈 Regression Line</h3>
+          <canvas id="regression-chart" height="250"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🔢 Learned Parameters</h3>
+        <div id="learned-params" class="params-display"></div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn-outline" onclick="goToStep(4)">← Back</button>
+        <button class="btn-primary" onclick="goToStep(6)">Make Predictions →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ STEP 6: PREDICTION ══════════════════════════════ -->
+    <section class="step-section" id="step-6">
+      <div class="step-header">
+        <div class="step-badge">STEP 07</div>
+        <h1 class="step-title">Prediction & Inference</h1>
+        <p class="step-subtitle">Enter a new sample and see how the model predicts step-by-step.</p>
+      </div>
+
+      <div class="card">
+        <h3>🧮 Enter New Sample</h3>
+        <div id="prediction-inputs" class="prediction-inputs"></div>
+        <button class="btn-primary" onclick="computePrediction()">Predict →</button>
+      </div>
+
+      <div class="card" id="prediction-result" style="display:none">
+        <h3>Step-by-Step Prediction Computation</h3>
+        <div id="prediction-steps"></div>
+        <div class="prediction-final" id="prediction-final"></div>
+      </div>
+
+      <div class="card">
+        <h3>📊 Predicted vs Actual (Test Set)</h3>
+        <canvas id="pred-vs-actual-chart" height="280"></canvas>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn-outline" onclick="goToStep(5)">← Back</button>
+        <button class="btn-primary" onclick="goToStep(7)">See Evaluation →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ STEP 7: EVALUATION ══════════════════════════════ -->
+    <section class="step-section" id="step-7">
+      <div class="step-header">
+        <div class="step-badge">STEP 08</div>
+        <h1 class="step-title">Evaluation Metrics</h1>
+        <p class="step-subtitle">Quantify how well the model performs on unseen data.</p>
+      </div>
+
+      <div class="card-grid metrics-grid">
+        <div class="metric-card" id="mse-card">
+          <div class="metric-label">MSE</div>
+          <div class="metric-value" id="mse-val">—</div>
+          <div class="metric-desc">Mean Squared Error</div>
+          <div class="metric-why">Penalizes large errors heavily. Lower = better.</div>
+        </div>
+        <div class="metric-card" id="mae-card">
+          <div class="metric-label">MAE</div>
+          <div class="metric-value" id="mae-val">—</div>
+          <div class="metric-desc">Mean Absolute Error</div>
+          <div class="metric-why">Average error magnitude. Robust to outliers.</div>
+        </div>
+        <div class="metric-card" id="r2-card">
+          <div class="metric-label">R²</div>
+          <div class="metric-value" id="r2-val">—</div>
+          <div class="metric-desc">R-Squared Score</div>
+          <div class="metric-why">Proportion of variance explained. 1.0 = perfect.</div>
+        </div>
+        <div class="metric-card" id="rmse-card">
+          <div class="metric-label">RMSE</div>
+          <div class="metric-value" id="rmse-val">—</div>
+          <div class="metric-desc">Root Mean Squared Error</div>
+          <div class="metric-why">Same units as target. Easier to interpret.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🔢 Mathematical Definitions</h3>
+        <div class="math-block">$$\text{MSE} = \frac{1}{m}\sum_{i=1}^{m}(y_i - \hat{y}_i)^2 \qquad \text{MAE} = \frac{1}{m}\sum_{i=1}^{m}|y_i - \hat{y}_i|$$</div>
+        <div class="math-block">$$R^2 = 1 - \frac{\sum(y_i - \hat{y}_i)^2}{\sum(y_i - \bar{y})^2}$$</div>
+      </div>
+
+      <div class="card" id="cv-results-card" style="display:none">
+        <h3>📐 Cross-Validation Results</h3>
+        <div id="cv-results-content"></div>
+      </div>
+
+      <div class="card">
+        <h3>🎉 Congratulations!</h3>
+        <p>You've completed the full Linear Regression pipeline. You can go back to any step and experiment with different settings to see how they affect the model.</p>
+        <button class="btn-primary" onclick="goToStep(0); resetApp()">🔄 Start Over with New Dataset</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast notifications -->
+  <div id="toast" class="toast"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/preprocessing.js"></script>
+  <script src="js/eda.js"></script>
+  <script src="js/theory.js"></script>
+  <script src="js/model.js"></script>
+  <script src="js/evaluation.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
